@@ -6,7 +6,8 @@ from scipy.stats import skew
 import statistics
 import time
 
-img = cv2.imread("E:\\CVG\\MicroSuture\\knot_depth_estimation\\dataset_80_sutures/15.png")
+#img = cv2.imread("E:\\CVG\\MicroSuture\\knot_depth_estimation\\dataset_80_sutures/15.png")
+img = cv2.imread("E:\\github\\micro-suturing\\output\\spec_contrast/79.png.png")
 img = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
 vec = img.reshape((-1,3))
 start_time = time.time()
