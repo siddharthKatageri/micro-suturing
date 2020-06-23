@@ -7,7 +7,7 @@ import numpy as np
 import os
 from scipy.signal import argrelextrema
 from scipy.signal import find_peaks
-
+from scipy.signal import peak_widths
 
 def find_maxpeak(image):
     image = cv2.cvtColor(image, cv2.COLOR_RGB2YCrCb)
@@ -79,7 +79,27 @@ def custom_strech(img, a, b, c, d):
     new = cv2.cvtColor(img, cv2.COLOR_YCrCb2RGB)
     return new
 
+def find_width(image):
+    image = cv2.cvtColor(image, cv2.COLOR_RGB2YCrCb)
+    hist,bins = np.histogram(image[:,:,0].ravel(),256,[0,256])
 
+    peaks, _ = find_peaks(hist)
+    max_peak=max(hist[peaks])
+    #to find the intensity of the pixel with highest frequency
+    for i in range(len(peaks)):
+        if hist[peaks[i]]==max_peak:
+            inst=peaks[i]
+            break
+
+    result=peak_widths(hist,[inst], rel_height=0.85)
+
+    print(result)
+    plt.plot(hist)
+    plt.plot(inst, hist[inst], "x")
+    plt.hlines(*result[1:], color="C3")
+    plt.show()
+    exit()
+    return result[2], result[3]
 
 
 reference = cv2.imread("E:\\CVG\\MicroSuture\\knot_depth_estimation\\dataset_80_sutures/6.png")
@@ -94,16 +114,14 @@ cv2.imshow("Source", image)
 cv2.imshow("reference", reference)
 cv2.imshow("matched", matched)
 
-streched = strech_wrt_channel(matched)
-plot_y_hist(streched)
-cv2.imshow("strech",streched)
-cv2.waitKey(0)
+#streched = strech_wrt_channel(matched)
+#plot_y_hist(streched)
+#cv2.imshow("strech",streched)
+#cv2.waitKey(0)
 
 
-new = custom_strech(matched, 200, 255, inst-40, inst+40)
+new = custom_strech(matched, 200, 255, inst-50, inst+40)
 plot_y_hist(new)
-
-
 cv2.imshow("new", new)
 cv2.waitKey(0)
 
