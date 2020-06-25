@@ -22,11 +22,16 @@ def find_width(image):
     result = list(result)
     result[2]=result[2]-15
     result[3]=result[3]+10
-    #plt.plot(hist)
-    #plt.plot(inst, hist[inst], "x")
-    #plt.hlines(*result[1:], color="C3")
-    #plt.show()
+    plt.plot(hist)
+    plt.plot(inst, hist[inst], "x")
+    plt.hlines(*result[1:], color="C3")
+    plt.show()
     return np.round(result[2]), np.round(result[3])
+
+def plot_y_hist(image):
+    image = cv2.cvtColor(image, cv2.COLOR_RGB2YCrCb)
+    plt.hist(image[:,:,0].ravel(),256,[0,256])
+    plt.show()
 
 def rescale(pin, a, b, c, d):
     f = pin - c
@@ -38,6 +43,7 @@ def rescale(pin, a, b, c, d):
         return 255
     return np.round(pout)
 
+
 def custom_strech(img, a, b, c, d):
     img = cv2.cvtColor(img, cv2.COLOR_RGB2YCrCb)
     for i in range(img.shape[0]):
@@ -45,14 +51,19 @@ def custom_strech(img, a, b, c, d):
             if(img[i][j][0]>c and img[i][j][0]<d):
                 out = rescale(img[i][j][0], a, b, c, d)
                 img[i][j][0] = out
+            if(img[i][j][0]<c and img[i][j][0]>0):
+                out = rescale(img[i][j][0], 0, 20, 0, c)
+                img[i][j][0] = out
     new = cv2.cvtColor(img, cv2.COLOR_YCrCb2RGB)
     return new
 
 
-image = cv2.imread("E:\\CVG\\MicroSuture\\knot_depth_estimation\\dataset_80_sutures/8.png")
+image = cv2.imread("E:\\CVG\\MicroSuture\\knot_depth_estimation\\dataset_80_sutures/82.png")
 
 il, ir = find_width(image)
 new_image = custom_strech(image, 200, 255, il, ir)
+plot_y_hist(new_image)
+
 
 cv2.imshow("image", image)
 cv2.imshow("mc", new_image)
