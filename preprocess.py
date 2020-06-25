@@ -101,9 +101,9 @@ def find_width(image):
     #plt.show()
     return np.round(result[2]), np.round(result[3])
 
-
+'''
 reference = cv2.imread("E:\\CVG\\MicroSuture\\knot_depth_estimation\\dataset_80_sutures/6.png")
-image = cv2.imread("E:\\CVG\\MicroSuture\\knot_depth_estimation\\dataset_80_sutures/69.png")
+image = cv2.imread("E:\\CVG\\MicroSuture\\knot_depth_estimation\\dataset_80_sutures/1.png")
 
 
 
@@ -128,7 +128,7 @@ cv2.imshow("reference", reference)
 cv2.imshow("image", image)
 cv2.imshow("matched", matched)
 cv2.waitKey(0)
-
+'''
 
 
 
