@@ -62,10 +62,8 @@ def rescale(pin, a, b, c, d):
     f = pin - c
     s = (b-c)/(d-c)
     pout = (f*s)+a
-    if(pout<0):
-        return 0
-    if(pout>255):
-        return 255
+    pout[pout<0] = 0
+    pout[pout>255] = 255
     return np.round(pout)
 
 
