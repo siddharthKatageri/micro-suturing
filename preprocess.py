@@ -69,15 +69,36 @@ def rescale(pin, a, b, c, d):
     return np.round(pout)
 
 
-def custom_strech(img, a, b, c, d):
+def custom_strech(img, a, b, c, d):         # verry slow than vectorized stretcb
     img = cv2.cvtColor(img, cv2.COLOR_RGB2YCrCb)
     for i in range(img.shape[0]):
         for j in range(img.shape[1]):
             if(img[i][j][0]>c and img[i][j][0]<d):
                 out = rescale(img[i][j][0], a, b, c, d)
                 img[i][j][0] = out
+            if(img[i][j][0]<c and img[i][j][0]>0):
+                out = rescale(img[i][j][0], 0, 20, 0, c)
+                img[i][j][0] = out
     new = cv2.cvtColor(img, cv2.COLOR_YCrCb2RGB)
     return new
+
+
+def vectorize_strech(img, a, b, c, d):          # very fast than custom stretch
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2YCrCb)
+    y, cr, cb = cv2.split(img)
+
+    sss = np.nonzero((y > c) & (y < d))
+    y[sss] = rescale(y[sss], a, b, c, d)
+
+    ddd = np.nonzero((y < c) & (y > 0))
+    y[ddd] = rescale(y[ddd], 0, 20, 0, c)
+
+    img = cv2.merge((y, cr, cb))
+    new = cv2.cvtColor(img, cv2.COLOR_YCrCb2RGB)
+
+    return new
+
+
 
 def find_width(image):
     image = cv2.cvtColor(image, cv2.COLOR_RGB2YCrCb)
