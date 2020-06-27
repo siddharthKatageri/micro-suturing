@@ -67,7 +67,7 @@ def normalize(fd_list):
 
 
 def gda_on_image(image):
-    print(image.shape)
+    #print(image.shape)
     find = np.where(image==[255])
     x = np.reshape(find[1],(-1 ,1))
     y = np.reshape(find[0],(-1 ,1))
@@ -78,8 +78,8 @@ def gda_on_image(image):
 
     mu = np.mean(coordinates, axis=0)
     covar_np = np.cov(coordinates, rowvar=False)
-    print(mu)
-    print(covar_np)
+    #print(mu)
+    #print(covar_np)
 
     npts = 3000
     limclose = ([0, 0] - ori_mean)/ori_std
@@ -98,13 +98,29 @@ def gda_on_image(image):
     #prob = norm_pdf_multivariate(np.array([454.44537648,351.1505526]), mu, matrix(covar_np))
 
     r = np.abs(coordinates - mu)
-    out = r/np.array(covar_np[0,0], covar_np[1,1])
-    print(out)
-    ch = [all(i>2) for i in out]
-    indices = [i for i, x in enumerate(ch) if x == True]
-    print(indices)
-    #print(np.where(out[0] > 2))
-    exit()
+    out = np.divide(r,[covar_np[0,0], covar_np[1,1]])
+    #print(out)
+
+    mask = out>2
+    #print(mask)
+    indices = [i for i,x in enumerate(mask) if True in x]
+    #print()
+    #print(indices)
+    #print()
+
+    #print(coordinates.shape)
+    new_coordinates = np.delete(coordinates, indices, 0)
+    #print(new_coordinates.shape)
+
+    new_coordinates = np.add(np.multiply(new_coordinates, ori_std), ori_mean)
+    new_coordinates = new_coordinates.astype('int')
+
+    denoise = np.zeros((image.shape[0], image.shape[1]), np.uint8)
+    s = (new_coordinates[:,1]), (new_coordinates[:,0])
+    #print(s)
+    denoise[s] = 255
+
+    return denoise
 
 
 def gmm_segmentation(img):
@@ -124,9 +140,9 @@ def gmm_segmentation(img):
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
     new_segmented = cv2.morphologyEx(segmented, cv2.MORPH_OPEN, kernel)
 
-    cv2.imshow("seg", segmented)
-    cv2.imshow("new", new_segmented)
-    cv2.waitKey(0)
+    #cv2.imshow("seg", segmented)
+    #cv2.imshow("new", new_segmented)
+    #cv2.waitKey(0)
     return new_segmented
 
 def find_segmented_contours(seg):
@@ -140,11 +156,11 @@ h=40
 #model = joblib.load('more_data.pkl')
 #model = joblib.load('multisize.pkl')
 
-name = "82.png"
+name = "73.png"
 img = cv2.imread("E:\\CVG\\MicroSuture\\knot_depth_estimation\\dataset_80_sutures/"+name)
 
 il, ir = preprocess.find_width(img)
-new_img = preprocess.custom_strech(img, 200, 255, il, ir)
+new_img = preprocess.vectorize_strech(img, 200, 255, il, ir)
 
 img_sup = img.copy()
 backup = img.copy()
@@ -158,21 +174,31 @@ for scale in [1]:
     #print("Scale:", scale)
     xsh = int(img.shape[1]*scale)
     ysh = int(img.shape[0]*scale)
-    #print(original)
-    #print(xsh, ysh)
+
     im_rescale = cv2.resize(new_img,(int(img.shape[1]*scale), int(img.shape[0]*scale)), interpolation=cv2.INTER_CUBIC)
     imcopy = cv2.resize(img,(int(img.shape[1]*scale), int(img.shape[0]*scale)), interpolation=cv2.INTER_CUBIC)
 
     segmented = gmm_segmentation(im_rescale)
+    cv2.imshow("1", segmented)
     segmented = gda_on_image(segmented)
 
+    cv2.imshow("2", segmented)
+    cv2.imshow("img", img)
+    cv2.waitKey(0)
+    exit()
+
+
+
+
+
+
+    # -------------------
     contours = find_segmented_contours(segmented)
     #new = eliminate_small(contours)
     cv2.drawContours(imcopy, contours, -1, (255, 0, 0), 4)
     cv2.imshow("im", imcopy)
     cv2.imshow("seg", segmented)
     cv2.waitKey(0)
-    exit()
 
     min, max = restrict(new)
     dis = max - min
