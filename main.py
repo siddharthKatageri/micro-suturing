@@ -8,6 +8,9 @@ from skimage import measure
 from numpy import *
 from sklearn.externals import joblib
 from skimage.feature import hog
+from scipy.stats import multivariate_normal
+from pywt import dwt2
+import skimage
 
 
 import matplotlib.pyplot as plt
@@ -211,6 +214,77 @@ def non_max_suppression(boxes, probs=None, overlapThresh=0.3):
 
 
 
+def add_new_feature(patch, mu, sd):
+    spaces=[]
+    to_add=[]
+    hsv = cv2.cvtColor(patch, cv2.COLOR_BGR2HSV)
+    lab = cv2.cvtColor(patch, cv2.COLOR_BGR2LAB)
+    y = cv2.cvtColor(patch, cv2.COLOR_BGR2YCR_CB)
+    spaces.append(patch)
+    spaces.append(hsv)
+    spaces.append(lab)
+    spaces.append(y)
+    for space in spaces:
+        first = np.mean(np.reshape(space[:,:,0],-1))
+        second = np.mean(np.reshape(space[:,:,1],-1))
+        third = np.mean(np.reshape(space[:,:,2],-1))
+        to_add.append(first)
+        to_add.append(second)
+        to_add.append(third)
+    # # ENERGY
+    im = cv2.cvtColor(patch, cv2.COLOR_BGR2GRAY)
+    _, (cH, cV, cD) = dwt2(im.T, 'db1')
+    Energy = (cH**2 + cV**2 + cD**2).sum()/im.size
+    to_add.append(Energy)
+
+    # ENTROPY
+    entropy = skimage.measure.shannon_entropy(patch)
+    to_add.append(entropy)
+
+    # CONTRAST
+    Y = cv2.cvtColor(patch, cv2.COLOR_BGR2YUV)[:,:,0]
+    min = np.int32(np.min(Y))
+    max = np.int32(np.max(Y))
+    if(min+max==0):
+        contrast = 0
+    else:
+        contrast = (max-min)/(max+min)
+    to_add.append(contrast)
+
+    # HU MOMENTS
+    # moments = cv2.moments(im)
+    # huMoments = cv2.HuMoments(moments)
+    # huMoments = np.ravel(huMoments)
+    # for i in huMoments:
+    #     to_add.append(i)
+
+    to_add = np.array(to_add)
+    to_add = (to_add-mu)/sd
+    return to_add
+
+
+
+
+
+def give_prob(img, components, new_mean, new_sd, distribution_mus, distribution_covars, weights):
+    fd, hog_image = hog(img, orientations=9, pixels_per_cell=(8, 8),cells_per_block=(2, 2), visualize=True, multichannel=True)
+    pre_point = np.dot(components,fd)
+    new_features = add_new_feature(img, new_mean, new_sd)
+    test_features = np.append(pre_point, new_features)
+    test_features = np.expand_dims(test_features, axis=0)
+
+
+    weights = weights.reshape(1,len(weights))
+    gen_probs = np.zeros((len(test_features), len(distribution_mus)))
+    for ind, l in enumerate(range(len(distribution_mus))):
+        var = multivariate_normal(mean=distribution_mus[l], cov=distribution_covars[l])  #multivariate_normal is sklearn's implementation
+        gen_probs[:,ind] = var.pdf(test_features)                                      # for my norm_pdf_multivariate function defined above
+    for ele in gen_probs:
+        #print("prob(x):\n", np.sum(np.multiply(gmm.weights_, ele)))
+        prob = np.sum(np.multiply(weights, ele))
+
+    return prob
+
 
 
 w=40
@@ -220,7 +294,7 @@ h=40
 model = joblib.load('more_data.pkl')
 #model = joblib.load('multisize.pkl')
 
-name = "63.png"
+name = "67.png"
 img = cv2.imread("E:\\CVG\\MicroSuture\\knot_depth_estimation\\dataset_80_sutures/"+name)
 
 #images = load_images_from_folder("E:\\CVG\\MicroSuture\\knot_depth_estimation\\dataset_80_sutures/")
@@ -328,13 +402,48 @@ for box in all_boxes:
 
 
 print("SVM DONE and NMS done")
-cv2.imshow("final", img)
-cv2.imshow("final_supression", img_sup)
-cv2.imshow("cp", imcopy)
+#####################################################################3
+# GMM Classifier
+
+k_components = np.load("E:/CVG/MicroSuture/GMM/files/k_components_1200.npy")
+k_new_mean = np.load("E:/CVG/MicroSuture/GMM/files/k_new_mean_1200.npy")
+k_new_sd = np.load("E:/CVG/MicroSuture/GMM/files/k_new_sd_1200.npy")
+k_mus = np.load("E:/CVG/MicroSuture/GMM/files/k_mus_1200.npy")
+k_covars = np.load("E:/CVG/MicroSuture/GMM/files/k_covars_1200.npy")
+k_weights = np.load("E:/CVG/MicroSuture/GMM/files/k_weights_1200.npy")
+
+nk_components = np.load("E:/CVG/MicroSuture/GMM/files/nk_components_1200.npy")
+nk_new_mean = np.load("E:/CVG/MicroSuture/GMM/files/nk_new_mean_1200.npy",)
+nk_new_sd = np.load("E:/CVG/MicroSuture/GMM/files/nk_new_sd_1200.npy")
+nk_mus = np.load("E:/CVG/MicroSuture/GMM/files/nk_mus_1200.npy")
+nk_covars = np.load("E:/CVG/MicroSuture/GMM/files/nk_covars_1200.npy")
+nk_weights = np.load("E:/CVG/MicroSuture/GMM/files/nk_weights_1200.npy")
+
+
+new_boxes=[]
+new_boxes_probs=[]
+for index,box in enumerate(all_boxes):
+    i = backup[box[1]:box[3],box[0]:box[2]]
+    i = cv2.resize(i, (w, h), interpolation=cv2.INTER_CUBIC)
+    #print(i.shape)
+    # cv2.imshow("patch",i)
+    # cv2.waitKey(0)
+    knot_prob = give_prob(i, k_components, k_new_mean, k_new_sd, k_mus, k_covars, k_weights)
+    non_knot_prob = give_prob(i, nk_components, nk_new_mean, nk_new_sd, nk_mus, nk_covars, nk_weights)
+    if(knot_prob > non_knot_prob):
+        new_boxes.append(box)
+        new_boxes_probs.append(all_boxes_probs[index])
+
+print("\nGMM done!")
+
+for box in new_boxes:
+    cv2.rectangle(backup, (box[0],box[1]), (box[2],box[3]), (255,0,0), thickness=1)
+
+cv2.imshow("gmm",backup)
+cv2.imshow("img",img)
+cv2.imshow("sup",img_sup)
+cv2.imshow("contours", imcopy)
 cv2.waitKey(0)
-
-
-
 
 
 
