@@ -301,18 +301,24 @@ w=40
 h=40
 
 #model = joblib.load('knot_model.pkl')
-model = joblib.load('more_data.pkl')
+#model = joblib.load('more_data.pkl')
 #model = joblib.load('multisize.pkl')
 
+
+model = joblib.load('E:\\CVG\\MicroSuture\\knot_depth_estimation/files_for_svm/preprocess_data.pkl')
+mu_for_norm = np.load('E:\\CVG\\MicroSuture\\knot_depth_estimation/files_for_svm/mu_for_norm.npy')
+sd_for_norm = np.load('E:\\CVG\\MicroSuture\\knot_depth_estimation/files_for_svm/sd_for_norm.npy')
+
+
 #image_names_we_got = load_image_names("E:\\CVG\\MicroSuture\\knot_depth_estimation\\data2/")
-image_names_we_got = load_image_names("E:\\CVG\\MicroSuture\\knot_depth_estimation\\dataset_80_sutures/")
+image_names_we_got = load_image_names("E:\\CVG\\MicroSuture\\knot_depth_estimation\\dataset_10_class/")
 print("images names are:", image_names_we_got)
 print("\nnumber of images:", len(image_names_we_got))
 print(image_names_we_got)
 #exit()
 for name in image_names_we_got:
     #img = cv2.imread("E:\\CVG\\MicroSuture\\knot_depth_estimation\\data2/"+name+".png")
-    img = cv2.imread("E:\\CVG\\MicroSuture\\knot_depth_estimation\\dataset_80_sutures/"+name+".png")
+    img = cv2.imread("E:\\CVG\\MicroSuture\\knot_depth_estimation\\dataset_10_class/"+name+".png")
 
 
     il, ir = preprocess.find_width(img)
@@ -333,11 +339,11 @@ for name in image_names_we_got:
         xsh = int(img.shape[1]*scale)
         ysh = int(img.shape[0]*scale)
 
-        im_rescale = cv2.resize(img,(int(img.shape[1]*scale), int(img.shape[0]*scale)), interpolation=cv2.INTER_CUBIC)
+        im_rescale = cv2.resize(new_img,(int(img.shape[1]*scale), int(img.shape[0]*scale)), interpolation=cv2.INTER_CUBIC)
         imcopy = cv2.resize(img,(int(img.shape[1]*scale), int(img.shape[0]*scale)), interpolation=cv2.INTER_CUBIC)
 
-        new_img = cv2.resize(new_img,(int(img.shape[1]*scale), int(img.shape[0]*scale)), interpolation=cv2.INTER_CUBIC)
-        segmented = gmm_segmentation(new_img)
+        #new_img = cv2.resize(new_img,(int(img.shape[1]*scale), int(img.shape[0]*scale)), interpolation=cv2.INTER_CUBIC)
+        segmented = gmm_segmentation(im_rescale)
         #cv2.imshow("1", segmented)
         segmented = gda_on_image(segmented)
 
@@ -378,9 +384,13 @@ for name in image_names_we_got:
                 #cv2.waitKey(0)
                 fd, hog_image = hog(patch, orientations=9, pixels_per_cell=(8, 8),
                                     cells_per_block=(2, 2), visualize=True, multichannel=True)
-                fd = fd.reshape(fd.shape[0],1)
-                ans = model.predict(fd.T)[0]
-                p = model.predict_proba(fd.T)
+
+                added_features = add_new_feature(patch, mu_for_norm, sd_for_norm)
+                final_features = np.hstack((np.array(fd),added_features))
+                final_features = final_features.reshape(final_features.shape[0],1)
+
+                ans = model.predict(final_features.T)[0]
+                p = model.predict_proba(final_features.T)
                 if(ans == 1.0 and np.squeeze(p)[1]>0.68):
                     probs_list.append(np.squeeze(p)[1])
                     #cv.imshow("p",patch)
@@ -404,7 +414,7 @@ for name in image_names_we_got:
 
 
         for iii in start_points:
-            cv2.rectangle(img, (iii[0],iii[1]), (round(iii[0]+w*(1/scale)),round(iii[1]+h*(1/scale))), (255,0,0), thickness=1)
+            cv2.rectangle(img, (iii[0],iii[1]), (round(iii[0]+w*(1/scale)),round(iii[1]+h*(1/scale))), (255,0,0), thickness=2)
             iii.append(iii[0]+round(w*(1/scale)))
             iii.append(iii[1]+round(h*(1/scale)))
             all_points.append(iii)
@@ -414,36 +424,36 @@ for name in image_names_we_got:
 
     ### TO DRAW BOUNDING BOXES AFTER NMS OPERATION
     for box in all_boxes:
-        cv2.rectangle(img_sup, (box[0],box[1]), (box[2],box[3]), (255,0,0), thickness=1)
+        cv2.rectangle(img_sup, (box[0],box[1]), (box[2],box[3]), (255,0,0), thickness=2)
 
 
     print("SVM DONE and NMS done")
     #####################################################################3
     # GMM Classifier
 
-    k_components = np.load("E:/CVG/MicroSuture/GMM/files/k_components_1200.npy")
-    k_new_mean = np.load("E:/CVG/MicroSuture/GMM/files/k_new_mean_1200.npy")
-    k_new_sd = np.load("E:/CVG/MicroSuture/GMM/files/k_new_sd_1200.npy")
-    k_mus = np.load("E:/CVG/MicroSuture/GMM/files/k_mus_1200.npy")
-    k_covars = np.load("E:/CVG/MicroSuture/GMM/files/k_covars_1200.npy")
-    k_weights = np.load("E:/CVG/MicroSuture/GMM/files/k_weights_1200.npy")
+    k_components = np.load("E:/CVG/MicroSuture/GMM/files/on_mode_clipped_93/k_components_1200.npy")
+    k_new_mean = np.load("E:/CVG/MicroSuture/GMM/files/on_mode_clipped_93/k_new_mean_1200.npy")
+    k_new_sd = np.load("E:/CVG/MicroSuture/GMM/files/on_mode_clipped_93/k_new_sd_1200.npy")
+    k_mus = np.load("E:/CVG/MicroSuture/GMM/files/on_mode_clipped_93/k_mus_1200.npy")
+    k_covars = np.load("E:/CVG/MicroSuture/GMM/files/on_mode_clipped_93/k_covars_1200.npy")
+    k_weights = np.load("E:/CVG/MicroSuture/GMM/files/on_mode_clipped_93/k_weights_1200.npy")
 
-    nk_components = np.load("E:/CVG/MicroSuture/GMM/files/nk_components_1200.npy")
-    nk_new_mean = np.load("E:/CVG/MicroSuture/GMM/files/nk_new_mean_1200.npy",)
-    nk_new_sd = np.load("E:/CVG/MicroSuture/GMM/files/nk_new_sd_1200.npy")
-    nk_mus = np.load("E:/CVG/MicroSuture/GMM/files/nk_mus_1200.npy")
-    nk_covars = np.load("E:/CVG/MicroSuture/GMM/files/nk_covars_1200.npy")
-    nk_weights = np.load("E:/CVG/MicroSuture/GMM/files/nk_weights_1200.npy")
+    nk_components = np.load("E:/CVG/MicroSuture/GMM/files/on_mode_clipped_93/nk_components_1200.npy")
+    nk_new_mean = np.load("E:/CVG/MicroSuture/GMM/files/on_mode_clipped_93/nk_new_mean_1200.npy",)
+    nk_new_sd = np.load("E:/CVG/MicroSuture/GMM/files/on_mode_clipped_93/nk_new_sd_1200.npy")
+    nk_mus = np.load("E:/CVG/MicroSuture/GMM/files/on_mode_clipped_93/nk_mus_1200.npy")
+    nk_covars = np.load("E:/CVG/MicroSuture/GMM/files/on_mode_clipped_93/nk_covars_1200.npy")
+    nk_weights = np.load("E:/CVG/MicroSuture/GMM/files/on_mode_clipped_93/nk_weights_1200.npy")
 
 
     new_boxes=[]
     new_boxes_probs=[]
     for index,box in enumerate(all_boxes):
-        i = backup[box[1]:box[3],box[0]:box[2]]
+        i = im_rescale[box[1]:box[3],box[0]:box[2]]
         i = cv2.resize(i, (w, h), interpolation=cv2.INTER_CUBIC)
         #print(i.shape)
-        # cv2.imshow("patch",i)
-        # cv2.waitKey(0)
+        #cv2.imshow("patch",i)
+        #cv2.waitKey(0)
         knot_prob = give_prob(i, k_components, k_new_mean, k_new_sd, k_mus, k_covars, k_weights)
         non_knot_prob = give_prob(i, nk_components, nk_new_mean, nk_new_sd, nk_mus, nk_covars, nk_weights)
         if(knot_prob > non_knot_prob):
@@ -453,7 +463,7 @@ for name in image_names_we_got:
     print("\nGMM done!")
 
     for box in new_boxes:
-        cv2.rectangle(backup, (box[0],box[1]), (box[2],box[3]), (255,0,0), thickness=1)
+        cv2.rectangle(backup, (box[0],box[1]), (box[2],box[3]), (255,0,0), thickness=2)
 
     #cv2.imshow("gmm",backup)
     #cv2.imshow("img",img)
@@ -468,7 +478,7 @@ for name in image_names_we_got:
     #print(all_points)
     #print()
     #print(probs_list)
-    file_svm = open("E:\\CVG\\MicroSuture\\GMM\\prediction_boxes/svm/"+name+".txt", "w")
+    file_svm = open("E:\\CVG\\MicroSuture\\GMM\\prediction_boxes/full_preprocess/svm/"+name+".txt", "w")
     for number in range(len(all_points)):
         xmin = str(all_points[number][0])
         ymin = str(all_points[number][1])
@@ -484,7 +494,7 @@ for name in image_names_we_got:
     #print(all_boxes)
     #print()
     #print(all_boxes_probs)
-    file_nms = open("E:\\CVG\\MicroSuture\\GMM\\prediction_boxes/nms/"+name+".txt", "w")
+    file_nms = open("E:\\CVG\\MicroSuture\\GMM\\prediction_boxes/full_preprocess/nms/"+name+".txt", "w")
     for number in range(len(all_boxes)):
         xmin = str(all_boxes[number][0])
         ymin = str(all_boxes[number][1])
@@ -500,7 +510,7 @@ for name in image_names_we_got:
     #print(new_boxes)
     #print()
     #print(new_boxes_probs)
-    file_gmm = open("E:\\CVG\\MicroSuture\\GMM\\prediction_boxes/gmm/"+name+".txt", "w")
+    file_gmm = open("E:\\CVG\\MicroSuture\\GMM\\prediction_boxes/full_preprocess/gmm/"+name+".txt", "w")
     for number in range(len(new_boxes)):
         xmin = str(new_boxes[number][0])
         ymin = str(new_boxes[number][1])
@@ -523,9 +533,9 @@ for name in image_names_we_got:
 
 
     #saving boxes for visualization
-    cv2.imwrite("E:\\github\\micro-suturing\\output/knot_detection_gmm/"+name+"svm.png",img)
-    cv2.imwrite("E:\\github\\micro-suturing\\output/knot_detection_gmm/"+name+"nms.png",img_sup)
-    cv2.imwrite("E:\\github\\micro-suturing\\output/knot_detection_gmm/"+name+"gmm.png",backup)
+    cv2.imwrite("E:\\github\\micro-suturing\\output/knot_detection_full_preprocess/"+name+"svm.png",img)
+    cv2.imwrite("E:\\github\\micro-suturing\\output/knot_detection_full_preprocess/"+name+"nms.png",img_sup)
+    cv2.imwrite("E:\\github\\micro-suturing\\output/knot_detection_full_preprocess/"+name+"gmm.png",backup)
 
 
 
