@@ -127,6 +127,21 @@ def load_image_names(folder):
         image_names.append(f)
     return image_names
 
+def restrict(new):
+    min = 10000
+    max = 0
+    for i in new:
+        for j in np.squeeze(i):
+            if(j[0] < min):
+                min = j[0]
+            if(j[0]>max):
+                max = j[0]
+    return min, max
+
+
+
+
+
 
 
 
@@ -152,11 +167,55 @@ def morph(seg, tenth):
 
 
 
+def detect(img, seg, min, max):
+    dis = max - min
+    mid = min+dis//3
+    #cv2.line(img, (mid,0), (mid,img.shape[0]), (0,0,255), 3)
+
+    spam = seg[:,min:mid]
+    left = np.zeros((img.shape[0],min))
+    right = np.zeros((img.shape[0], img.shape[1]-mid))
+    roi = np.hstack((left, spam))
+    roi = np.hstack((roi, right))
+    roi = roi.astype("uint8")
+    #cv2.imshow("roi", roi)
+
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (10,1))
+    roi = cv2.morphologyEx(roi, cv2.MORPH_OPEN, kernel, iterations=1)
+    #cv2.imshow("horizontals", roi)
+
+    _, cnts, heir = cv2.findContours(roi, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+
+    #to draw the rectangle
+    for c in cnts:
+        l = tuple(np.min(np.squeeze(c), axis=0))
+        r = tuple(np.max(np.squeeze(c), axis=0))
+        cv2.circle(img, l, 1, (255,255,0), 2)
+        cv2.circle(img, r, 1, (255,255,0), 2)
+        h1=l
+        h2=r
+        temp=h1[1]
+        if temp>h2[1]:
+            y3=temp
+            x3=h2[0]
+            y2=int(h2[1]-(1/3)*(y3-h2[1]))
+            x2=h1[0]
+        else:
+            y2=temp
+            x2=h1[0]
+            y3=int(h2[1]+(1/3)*(h2[1]-y2))
+            x3=h2[0]
+        cv2.rectangle(img,(x2,y2),(max,y3),(255, 0, 0) ,2)
+    #cv2.imshow("result",img)
+    return img
+
 
 
 name = "6.png"
 img = cv2.imread("E:\\CVG\\MicroSuture\\knot_depth_estimation\\dataset_80_sutures/"+name)
 #img = cv2.imread("E:\\CVG\\MicroSuture\\knot_depth_estimation\\dataset_10_class/"+name)
+altertate = img.copy()
 print(img.shape)
 
 il, ir = preprocess.find_width(img)
@@ -165,7 +224,16 @@ new_img = preprocess.vectorize_strech(img, 200, 255, il, ir)
 segmented = gmm_segmentation(new_img)
 segmented_denoise = gda_on_image(segmented)
 
-closed = morph(segmented_denoise, False)
+#morphological for filling patches and illumination effects
+segmentation_closed = morph(segmented_denoise, False)
+
+contours = find_segmented_contours(segmentation_closed)
+min, max = restrict(contours)
+cv2.line(img, (min,0), (min,img.shape[0]), (0,0,255), 3)
+cv2.line(img, (max,0), (max,img.shape[0]), (0,0,255), 3)
+
+#detection, boxes = detect(altertate, segmentation_closed, min, max)
+detection = detect(altertate, segmentation_closed, min, max)
 
 #closing_contours = find_segmented_contours(closing)
 #new_closing_contours = eliminate_small(closing_contours)
@@ -174,6 +242,7 @@ closed = morph(segmented_denoise, False)
 
 cv2.imshow("img", img)
 cv2.imshow("denoise", segmented_denoise)
-cv2.imshow("close", closed)
+cv2.imshow("close", segmentation_closed)
+cv2.imshow("detection", detection)
 cv2.waitKey(0)
 
