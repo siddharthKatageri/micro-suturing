@@ -232,9 +232,11 @@ min, max = restrict(contours)
 cv2.line(img, (min,0), (min,img.shape[0]), (0,0,255), 3)
 cv2.line(img, (max,0), (max,img.shape[0]), (0,0,255), 3)
 
-#detection, boxes = detect(altertate, segmentation_closed, min, max)
+#calling suture detection
 detection = detect(altertate, segmentation_closed, min, max)
 
+
+#for eliminating small contours
 #closing_contours = find_segmented_contours(closing)
 #new_closing_contours = eliminate_small(closing_contours)
 #cv2.drawContours(img, new_closing_contours, -1, (255, 0, 0), 4)
