@@ -76,7 +76,7 @@ def add_new_features(patches):
         final_add.append(np.array(to_add))
     final_add = np.array(final_add)
     norm_final_add, final_add_mean, final_add_sd = normalize(final_add)
-    return norm_final_add
+    return norm_final_add, final_add_mean, final_add_sd
 
 
 
@@ -113,27 +113,39 @@ def load_image_files(container_path, block, dimension=(40, 40)):
             train_fd.append(fd)
             hog_images.append(hog_image_rescaled)
 
-    new_add = add_new_features(images)
+    new_add, mu, sd = add_new_features(images)
     final_features = np.column_stack((train_fd, new_add))
     X = np.array(final_features)
 
     # X = np.array(train_fd)
     print("feature",X.shape)
-    return X,images, hog_images
+    return X,images, hog_images, mu, sd
 
-X,images, h = load_image_files("E:\\CVG\\MicroSuture\\knot_depth_estimation/preprocess_4040", 8)
+X_train,images, h, mu_for_norm, sd_for_norm = load_image_files("E:\\CVG\\MicroSuture\\FINAL_DATASET\\train", 8)
 
-y0 = np.zeros(1305)
-y1 = np.ones(1255)
+y0 = np.zeros(852)
+y1 = np.ones(787)
 # 609 images for Class 0, 232 for Class 1.
 # y0 = np.zeros(1305)
 # y1 = np.ones(667)
 
 # concatenate y0 and y1 to form y
-y = []
-y = np.concatenate((y1, y0), axis=0)
+y_train = []
+y_train = np.concatenate((y1, y0), axis=0)
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42, test_size=0.2)
+X_test,images, h, _, _ = load_image_files("E:\\CVG\\MicroSuture\\FINAL_DATASET\\test", 8)
+
+y0 = np.zeros(454)
+y1 = np.ones(469)
+# 609 images for Class 0, 232 for Class 1.
+# y0 = np.zeros(1305)
+# y1 = np.ones(667)
+
+# concatenate y0 and y1 to form y
+y_test = []
+y_test = np.concatenate((y1, y0), axis=0)
+
+
 print("X train is:",len(X_train))
 print("y train is:",len(y_train))
 print("X test is:",len(X_test))
@@ -141,13 +153,13 @@ print("y test is:",len(y_test))
 # define support vector classifier
 
 
-#grid search for best parameter
+'''#grid search for best parameter
 param_grid = {'C': [0.01 ,0.1, 1, 10, 100],
               'gamma': [0.01, 0.1, 1, 10, 100],
               'kernel': ['rbf', 'linear', 'poly'],
               'degree': [1, 2, 3, 4, 5]}
 
-grid = GridSearchCV(SVC(), param_grid, refit = True, verbose = 3)
+grid = GridSearchCV(SVC(), param_grid, refit = True, verbose = 3, n_jobs=-1)
 grid.fit(X_train, y_train)
 
 
@@ -159,15 +171,18 @@ print(grid.best_estimator_)
 
 
 exit()
-
+'''
 
 
 #best which we are using
 #svm = SVC(kernel='poly',gamma=2,degree=3,C=1, probability=True, random_state=42)
 
-# svm = SVC(kernel='poly',gamma=5,degree=3,C=5, probability=True, random_state=42) #AUC=0.95
-#svm = SVC(kernel='poly',gamma=2,degree=3,C=1, probability=True, random_state=42) #addes gamma to earlier params and kernel=poly
-#svm = SVC(kernel='poly',gamma=2,degree=3,C=0.0001, probability=True, random_state=42, verbose=False)#f1score(train):0.9969 #auc=0.97
+# after grid search
+svm = SVC(C=0.01, cache_size=200, class_weight=None, coef0=0.0,
+  decision_function_shape='ovr', degree=3, gamma=1, kernel='poly',
+  max_iter=-1, probability=True, random_state=42, shrinking=True,
+  tol=0.001, verbose=False)
+
 
 # fit model
 svm.fit(X_train, y_train)
@@ -175,7 +190,6 @@ svm.fit(X_train, y_train)
 
 y_pred = svm.predict(X_test)
 y_tr_pred = svm.predict(X_train)
-#print(y_test)
 
 # calculate accuracy
 train_accuracy = accuracy_score(y_train, y_tr_pred)
@@ -192,6 +206,11 @@ print("F1 Score(test):", fscore)
 #joblib.dump(svm, 'more_data.pkl')
 #joblib.dump(svm, 'energy.pkl')
 
+'''
+joblib.dump(svm, 'E:\\CVG\\MicroSuture\\knot_depth_estimation/files_for_svm/final/preprocess_data.pkl')
+np.save('E:\\CVG\\MicroSuture\\knot_depth_estimation/files_for_svm/final/mu_for_norm.npy', mu_for_norm)
+np.save('E:\\CVG\\MicroSuture\\knot_depth_estimation/files_for_svm/final/sd_for_norm.npy', sd_for_norm)
+'''
 
 tn, fp, fn, tp = confusion_matrix(y_test, y_pred).ravel()
 print("tp, fp, fn, tn")

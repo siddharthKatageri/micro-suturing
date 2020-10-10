@@ -336,12 +336,12 @@ h=40
 #model = joblib.load('more_data.pkl')
 #model = joblib.load('multisize.pkl')
 
-model = joblib.load('E:\\CVG\\MicroSuture\\knot_depth_estimation/files_for_svm/preprocess_data.pkl')
-mu_for_norm = np.load('E:\\CVG\\MicroSuture\\knot_depth_estimation/files_for_svm/mu_for_norm.npy')
-sd_for_norm = np.load('E:\\CVG\\MicroSuture\\knot_depth_estimation/files_for_svm/sd_for_norm.npy')
+model = joblib.load('E:\\CVG\\MicroSuture\\knot_depth_estimation/files_for_svm/final/preprocess_data.pkl')
+mu_for_norm = np.load('E:\\CVG\\MicroSuture\\knot_depth_estimation/files_for_svm/final/mu_for_norm.npy')
+sd_for_norm = np.load('E:\\CVG\\MicroSuture\\knot_depth_estimation/files_for_svm/final/sd_for_norm.npy')
 
-name = "6.png"
-img = cv2.imread("E:\\CVG\\MicroSuture\\knot_depth_estimation\\dataset_80_sutures/"+name)
+name = "4.png"
+img = cv2.imread("E:\\CVG\\MicroSuture\\FINAL_DATA_SPLIT\\original_data\\test/"+name)
 
 #images = load_images_from_folder("E:\\CVG\\MicroSuture\\knot_depth_estimation\\dataset_80_sutures/")
 #for img in images:
@@ -410,6 +410,7 @@ for scale in [1]:
             #cv2.waitKey(0)
             fd, hog_image = hog(patch, orientations=9, pixels_per_cell=(8, 8),
                                 cells_per_block=(2, 2), visualize=True, multichannel=True)
+
             added_features = add_new_feature(patch, mu_for_norm, sd_for_norm)
             final_features = np.hstack((np.array(fd),added_features))
             final_features = final_features.reshape(final_features.shape[0],1)
@@ -445,30 +446,30 @@ for scale in [1]:
         all_points.append(iii)
     start_points=[]
 
-all_boxes, all_boxes_probs = non_max_suppression(np.array(all_points), probs_list, 0.3)
-
+all_boxes, all_boxes_probs = non_max_suppression(np.array(all_points), probs_list, 0.1) #0.1 for all classes other than class 10.
+                                                                                        #0.3 for class 10
 ### TO DRAW BOUNDING BOXES AFTER NMS OPERATION
 for box in all_boxes:
-    cv2.rectangle(img_sup, (box[0],box[1]), (box[2],box[3]), (255,0,0), thickness=1)
+    cv2.rectangle(img_sup, (box[0],box[1]), (box[2],box[3]), (255,0,0), thickness=2)
 
 
 print("SVM DONE and NMS done")
 #####################################################################3
-# GMM Classifier
+# GMM Classifier (commenting out gmm classifier and stoping the algorithm at nms itself.)
+'''
+k_components = np.load("E:/CVG/MicroSuture/GMM/files/final_files/3k_components_1200.npy")
+k_new_mean = np.load("E:/CVG/MicroSuture/GMM/files/final_files/3k_new_mean_1200.npy")
+k_new_sd = np.load("E:/CVG/MicroSuture/GMM/files/final_files/3k_new_sd_1200.npy")
+k_mus = np.load("E:/CVG/MicroSuture/GMM/files/final_files/3k_mus_1200.npy")
+k_covars = np.load("E:/CVG/MicroSuture/GMM/files/final_files/3k_covars_1200.npy")
+k_weights = np.load("E:/CVG/MicroSuture/GMM/files/final_files/3k_weights_1200.npy")
 
-k_components = np.load("E:/CVG/MicroSuture/GMM/files/on_mode_clipped_93/k_components_1200.npy")
-k_new_mean = np.load("E:/CVG/MicroSuture/GMM/files/on_mode_clipped_93/k_new_mean_1200.npy")
-k_new_sd = np.load("E:/CVG/MicroSuture/GMM/files/on_mode_clipped_93/k_new_sd_1200.npy")
-k_mus = np.load("E:/CVG/MicroSuture/GMM/files/on_mode_clipped_93/k_mus_1200.npy")
-k_covars = np.load("E:/CVG/MicroSuture/GMM/files/on_mode_clipped_93/k_covars_1200.npy")
-k_weights = np.load("E:/CVG/MicroSuture/GMM/files/on_mode_clipped_93/k_weights_1200.npy")
-
-nk_components = np.load("E:/CVG/MicroSuture/GMM/files/on_mode_clipped_93/nk_components_1200.npy")
-nk_new_mean = np.load("E:/CVG/MicroSuture/GMM/files/on_mode_clipped_93/nk_new_mean_1200.npy",)
-nk_new_sd = np.load("E:/CVG/MicroSuture/GMM/files/on_mode_clipped_93/nk_new_sd_1200.npy")
-nk_mus = np.load("E:/CVG/MicroSuture/GMM/files/on_mode_clipped_93/nk_mus_1200.npy")
-nk_covars = np.load("E:/CVG/MicroSuture/GMM/files/on_mode_clipped_93/nk_covars_1200.npy")
-nk_weights = np.load("E:/CVG/MicroSuture/GMM/files/on_mode_clipped_93/nk_weights_1200.npy")
+nk_components = np.load("E:/CVG/MicroSuture/GMM/files/final_files/3nk_components_1200.npy")
+nk_new_mean = np.load("E:/CVG/MicroSuture/GMM/files/final_files/3nk_new_mean_1200.npy",)
+nk_new_sd = np.load("E:/CVG/MicroSuture/GMM/files/final_files/3nk_new_sd_1200.npy")
+nk_mus = np.load("E:/CVG/MicroSuture/GMM/files/final_files/3nk_mus_1200.npy")
+nk_covars = np.load("E:/CVG/MicroSuture/GMM/files/final_files/3nk_covars_1200.npy")
+nk_weights = np.load("E:/CVG/MicroSuture/GMM/files/final_files/3nk_weights_1200.npy")
 
 
 new_boxes=[]
@@ -490,7 +491,8 @@ print("\nGMM done!")
 for box in new_boxes:
     cv2.rectangle(backup, (box[0],box[1]), (box[2],box[3]), (255,0,0), thickness=1)
 
-cv2.imshow("gmm",backup)
+'''
+#cv2.imshow("gmm",backup)# this will output after gmm output
 cv2.imshow("img",img)
 cv2.imshow("sup",img_sup)
 cv2.imshow("contours", imcopy)
